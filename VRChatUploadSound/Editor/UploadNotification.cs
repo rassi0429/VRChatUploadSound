@@ -730,6 +730,7 @@ $template = @'
             <text id=""2"">{EscapeXml(message)}</text>
         </binding>
     </visual>
+    <audio silent=""true""/>
 </toast>
 '@
 
@@ -787,6 +788,7 @@ $template = @'
             <text id=""2"">{EscapeXml(message)}</text>
         </binding>
     </visual>
+    <audio silent=""true""/>
 </toast>
 '@
 
