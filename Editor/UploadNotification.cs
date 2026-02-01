@@ -703,17 +703,6 @@ namespace WorldUploadNotification
 
         private static void ShowNotification(string message, bool isSuccess = true)
         {
-            // Unity内の通知
-            var sceneView = SceneView.lastActiveSceneView;
-            sceneView?.ShowNotification(new GUIContent(message), 3f);
-
-            var gameViewType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
-            if (gameViewType != null)
-            {
-                var gameView = EditorWindow.GetWindow(gameViewType, false, null, false);
-                gameView?.ShowNotification(new GUIContent(message), 3f);
-            }
-
             // Windowsトースト通知
             #if UNITY_EDITOR_WIN
             if (UploadNotificationSettings.Instance.toastEnabled)
