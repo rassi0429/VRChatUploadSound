@@ -180,14 +180,12 @@ namespace WorldUploadNotification
             if (TryRegisterWorldHooks())
             {
                 _worldHooksRegistered = true;
-                Debug.Log("[UploadNotification] World upload hooks registered");
             }
 
             // Avatar Builder
             if (TryRegisterAvatarHooks())
             {
                 _avatarHooksRegistered = true;
-                Debug.Log("[UploadNotification] Avatar upload hooks registered");
             }
 
             _isRegistered = _worldHooksRegistered || _avatarHooksRegistered;
@@ -234,7 +232,6 @@ namespace WorldUploadNotification
                         typeof(WorldUploadNotificationSound).GetMethod(nameof(OnBuildError),
                             BindingFlags.NonPublic | BindingFlags.Static));
                     buildErrorEvent.AddEventHandler(_worldBuilder, _worldBuildErrorHandler);
-                    Debug.Log("[UploadNotification] World OnSdkBuildError handler registered");
                 }
 
                 return true;
@@ -251,36 +248,21 @@ namespace WorldUploadNotification
             try
             {
                 _avatarApiType = FindType("VRC.SDK3A.Editor.IVRCSdkAvatarBuilderApi");
-                if (_avatarApiType == null)
-                {
-                    Debug.Log("[UploadNotification] IVRCSdkAvatarBuilderApi type not found");
-                    return false;
-                }
+                if (_avatarApiType == null) return false;
 
                 _avatarBuilder = TryGetBuilder(_avatarApiType);
-                if (_avatarBuilder == null)
-                {
-                    Debug.Log("[UploadNotification] Avatar builder instance not found");
-                    return false;
-                }
-                Debug.Log($"[UploadNotification] Avatar builder found: {_avatarBuilder.GetType().FullName}");
+                if (_avatarBuilder == null) return false;
 
                 // インターフェースではなく実際の型からイベントを取得
                 var builderType = _avatarBuilder.GetType();
                 var successEvent = builderType.GetEvent("OnSdkUploadSuccess");
                 if (successEvent != null)
                 {
-                    Debug.Log($"[UploadNotification] OnSdkUploadSuccess event found, handler type: {successEvent.EventHandlerType}");
                     _avatarSuccessHandler = Delegate.CreateDelegate(
                         successEvent.EventHandlerType,
                         typeof(WorldUploadNotificationSound).GetMethod(nameof(OnAvatarUploadSuccess),
                             BindingFlags.NonPublic | BindingFlags.Static));
                     successEvent.AddEventHandler(_avatarBuilder, _avatarSuccessHandler);
-                    Debug.Log("[UploadNotification] OnSdkUploadSuccess handler registered");
-                }
-                else
-                {
-                    Debug.LogWarning("[UploadNotification] OnSdkUploadSuccess event not found");
                 }
 
                 var errorEvent = builderType.GetEvent("OnSdkUploadError");
@@ -291,7 +273,6 @@ namespace WorldUploadNotification
                         typeof(WorldUploadNotificationSound).GetMethod(nameof(OnUploadError),
                             BindingFlags.NonPublic | BindingFlags.Static));
                     errorEvent.AddEventHandler(_avatarBuilder, _avatarErrorHandler);
-                    Debug.Log("[UploadNotification] OnSdkUploadError handler registered");
                 }
 
                 // ビルドエラーもフック
@@ -303,7 +284,6 @@ namespace WorldUploadNotification
                         typeof(WorldUploadNotificationSound).GetMethod(nameof(OnBuildError),
                             BindingFlags.NonPublic | BindingFlags.Static));
                     buildErrorEvent.AddEventHandler(_avatarBuilder, _avatarBuildErrorHandler);
-                    Debug.Log("[UploadNotification] Avatar OnSdkBuildError handler registered");
                 }
 
                 return true;
@@ -349,7 +329,7 @@ namespace WorldUploadNotification
                     buildErrorEvent?.RemoveEventHandler(_worldBuilder, _worldBuildErrorHandler);
                 }
             }
-            catch { }
+            catch (Exception) { /* クリーンアップ時の例外は無視 */ }
 
             try
             {
@@ -367,7 +347,7 @@ namespace WorldUploadNotification
                     buildErrorEvent?.RemoveEventHandler(_avatarBuilder, _avatarBuildErrorHandler);
                 }
             }
-            catch { }
+            catch (Exception) { /* クリーンアップ時の例外は無視 */ }
 
             _isRegistered = false;
             _worldHooksRegistered = false;
@@ -454,7 +434,7 @@ namespace WorldUploadNotification
                     {
                         PlaySoundDirect(soundPath, volume, dataPath);
                     }
-                    catch { }
+                    catch (Exception) { /* バックグラウンドスレッドの例外は無視 */ }
                 });
                 #endif
 
@@ -469,6 +449,7 @@ namespace WorldUploadNotification
 
         #if UNITY_EDITOR_WIN
         private static int _mciAliasCounter = 0;
+        private static string _lastMciAlias = null;
 
         private static void PlaySoundDirect(string soundPath, float volume, string dataPath)
         {
@@ -477,7 +458,6 @@ namespace WorldUploadNotification
                 string fullPath;
                 if (soundPath.StartsWith("Assets/"))
                 {
-                    // Assets/... → フルパスに変換
                     fullPath = Path.Combine(Path.GetDirectoryName(dataPath), soundPath);
                 }
                 else
@@ -489,38 +469,33 @@ namespace WorldUploadNotification
 
                 if (File.Exists(fullPath))
                 {
+                    // 前回のMCIリソースをクリーンアップ
+                    if (_lastMciAlias != null)
+                    {
+                        mciSendString($"close {_lastMciAlias}", null, 0, IntPtr.Zero);
+                    }
+
                     // 一意のエイリアスを生成
                     string alias = $"notifysound{_mciAliasCounter++}";
+                    _lastMciAlias = alias;
 
-                    // ファイルを開く
                     string ext = Path.GetExtension(fullPath).ToLower();
-                    string openCmd;
-
-                    if (ext == ".mp3")
-                    {
-                        openCmd = $"open \"{fullPath}\" type mpegvideo alias {alias}";
-                    }
-                    else
-                    {
-                        openCmd = $"open \"{fullPath}\" alias {alias}";
-                    }
+                    string openCmd = ext == ".mp3"
+                        ? $"open \"{fullPath}\" type mpegvideo alias {alias}"
+                        : $"open \"{fullPath}\" alias {alias}";
 
                     int result = mciSendString(openCmd, null, 0, IntPtr.Zero);
 
                     if (result == 0)
                     {
-                        // 音量設定 (0-1000)
                         int mciVolume = (int)(volume * 1000);
                         mciSendString($"setaudio {alias} volume to {mciVolume}", null, 0, IntPtr.Zero);
-
-                        // 再生
                         mciSendString($"play {alias}", null, 0, IntPtr.Zero);
                         return;
                     }
                 }
             }
 
-            // フォールバック: システム音
             System.Media.SystemSounds.Hand.Play();
         }
         #endif
@@ -529,8 +504,6 @@ namespace WorldUploadNotification
         [DllImport("winmm.dll")]
         private static extern int mciSendString(string command, System.Text.StringBuilder buffer, int bufferSize, IntPtr hwndCallback);
 
-        [DllImport("winmm.dll")]
-        private static extern int waveOutSetVolume(IntPtr hwo, uint dwVolume);
         #endif
 
         private static void PlayNotificationSound(bool isSuccess = true)
@@ -565,81 +538,6 @@ namespace WorldUploadNotification
             #else
             Debug.LogWarning("[UploadNotification] サウンドファイルが設定されていません");
             #endif
-        }
-
-        #if UNITY_EDITOR_WIN
-        [DllImport("winmm.dll")]
-        private static extern bool PlaySound(string pszSound, IntPtr hmod, uint fdwSound);
-
-        private const uint SND_FILENAME = 0x00020000;
-        private const uint SND_ASYNC = 0x0001;
-
-        private static void PlaySoundWithMci(string filePath, float volume)
-        {
-            try
-            {
-                // 前回の再生を停止
-                mciSendString("close uploadnotify", null, 0, IntPtr.Zero);
-
-                // 音量を設定 (0-1000)
-                int mciVolume = Mathf.RoundToInt(volume * 1000);
-
-                // パスを正規化（バックスラッシュに統一）
-                string normalizedPath = filePath.Replace("/", "\\");
-
-                // ファイルを開く（型指定なしで自動判別させる）
-                string openCmd = $"open \"{normalizedPath}\" alias uploadnotify";
-                int result = mciSendString(openCmd, null, 0, IntPtr.Zero);
-
-                if (result != 0)
-                {
-                    // waveaudioを明示的に指定
-                    openCmd = $"open \"{normalizedPath}\" type waveaudio alias uploadnotify";
-                    result = mciSendString(openCmd, null, 0, IntPtr.Zero);
-                }
-
-                if (result != 0)
-                {
-                    // mpegvideoを試す
-                    openCmd = $"open \"{normalizedPath}\" type mpegvideo alias uploadnotify";
-                    result = mciSendString(openCmd, null, 0, IntPtr.Zero);
-                }
-
-                if (result == 0)
-                {
-                    // 音量設定
-                    mciSendString($"setaudio uploadnotify volume to {mciVolume}", null, 0, IntPtr.Zero);
-
-                    // 再生
-                    mciSendString("play uploadnotify", null, 0, IntPtr.Zero);
-
-                    Debug.Log($"[UploadNotification] 音声を再生: {Path.GetFileName(filePath)} (音量: {volume:P0})");
-                }
-                else
-                {
-                    Debug.Log($"[UploadNotification] MCI失敗(code:{result})、PlaySoundで試行");
-                    // WAVファイルならPlaySoundでフォールバック（音量制御なし）
-                    if (filePath.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // waveOutSetVolumeでシステム音量を一時的に変更
-                        uint vol = (uint)(volume * 0xFFFF);
-                        uint stereoVol = vol | (vol << 16);
-                        waveOutSetVolume(IntPtr.Zero, stereoVol);
-
-                        PlaySound(normalizedPath, IntPtr.Zero, SND_FILENAME | SND_ASYNC);
-                        Debug.Log($"[UploadNotification] PlaySoundで再生: {Path.GetFileName(filePath)}");
-                    }
-                    else
-                    {
-                        PlayExternalSound(filePath, volume);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[UploadNotification] 再生エラー: {ex.Message}");
-                PlayExternalSound(filePath, volume);
-            }
         }
 
         private static void PlayDefaultNotificationSound(float volume, bool isSuccess)
@@ -685,7 +583,7 @@ namespace WorldUploadNotification
                         System.Media.SystemSounds.Asterisk.Play();
                     else
                         System.Media.SystemSounds.Hand.Play();
-                    Debug.Log("[UploadNotification] システム音を再生（音量制御なし）");
+
                 }
             }
             catch (Exception ex)
@@ -779,7 +677,7 @@ namespace WorldUploadNotification
             // 再生終了を監視
             EditorApplication.update += CheckClipFinished;
 
-            Debug.Log($"[UploadNotification] 音声を再生: {clip.name} (音量: {volume:P0})");
+
         }
 
         private static void CheckClipFinished()
