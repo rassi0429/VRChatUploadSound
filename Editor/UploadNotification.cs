@@ -14,8 +14,7 @@ namespace WorldUploadNotification
         Template1 = 0,
         Template2 = 1,
         Template3 = 2,
-        Template4 = 3,
-        Custom = 4
+        Custom = 3
     }
 
     [Serializable]
@@ -910,7 +909,8 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 
     public class UploadNotificationSettingsWindow : EditorWindow
     {
-        private static readonly string[] SoundSelectionLabels = { "テンプレート 1", "テンプレート 2", "テンプレート 3", "テンプレート 4", "カスタム" };
+        private static readonly string[] SuccessSoundLabels = { "電子レンジのチン", "電子音１", "電子音２", "カスタム" };
+        private static readonly string[] ErrorSoundLabels = { "電子音１", "ﾎﾟﾖﾖｰﾝ", "トランペット", "カスタム" };
 
         public static void ShowWindow()
         {
@@ -937,12 +937,12 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
             EditorGUILayout.Space(10);
 
             // 成功音
-            DrawSoundSelector("成功音", ref settings.successSelection, ref settings.customSuccessSoundPath, ref settings.successVolume);
+            DrawSoundSelector("成功音", SuccessSoundLabels, ref settings.successSelection, ref settings.customSuccessSoundPath, ref settings.successVolume);
 
             EditorGUILayout.Space(10);
 
             // 失敗音
-            DrawSoundSelector("失敗音", ref settings.errorSelection, ref settings.customErrorSoundPath, ref settings.errorVolume);
+            DrawSoundSelector("失敗音", ErrorSoundLabels, ref settings.errorSelection, ref settings.customErrorSoundPath, ref settings.errorVolume);
 
             if (EditorGUI.EndChangeCheck())
             {
@@ -978,12 +978,12 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
             EditorGUILayout.EndHorizontal();
         }
 
-        private void DrawSoundSelector(string label, ref SoundSelection selection, ref string customPath, ref float volume)
+        private void DrawSoundSelector(string label, string[] soundLabels, ref SoundSelection selection, ref string customPath, ref float volume)
         {
             EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
 
             // ドロップダウンで選択
-            selection = (SoundSelection)EditorGUILayout.Popup((int)selection, SoundSelectionLabels);
+            selection = (SoundSelection)EditorGUILayout.Popup((int)selection, soundLabels);
 
             // カスタム選択時のみファイル選択UI表示
             if (selection == SoundSelection.Custom)
