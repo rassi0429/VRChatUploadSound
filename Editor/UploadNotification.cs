@@ -965,7 +965,7 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 
             // ヘッダー
             EditorGUILayout.Space(5);
-            GUILayout.Label("🔔 Upload Notification", _headerStyle);
+            GUILayout.Label("Upload Notification", _headerStyle);
             GUILayout.Label($"v{VERSION} by kokoa", _versionStyle);
 
             // SDK状態（コンパクト表示）
@@ -996,13 +996,13 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 
             // 成功音セクション
             EditorGUILayout.BeginVertical(_boxStyle);
-            DrawSoundSelector("✅ 成功音", SuccessSoundLabels, ref settings.successSelection, 
+            DrawSoundSelector("成功音", SuccessSoundLabels, ref settings.successSelection, 
                 ref settings.customSuccessSoundPath, ref settings.successVolume, true);
             EditorGUILayout.EndVertical();
 
             // 失敗音セクション
             EditorGUILayout.BeginVertical(_boxStyle);
-            DrawSoundSelector("❌ 失敗音", ErrorSoundLabels, ref settings.errorSelection, 
+            DrawSoundSelector("失敗音", ErrorSoundLabels, ref settings.errorSelection, 
                 ref settings.customErrorSoundPath, ref settings.errorVolume, false);
             EditorGUILayout.EndVertical();
 
@@ -1026,12 +1026,12 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
                 fixedHeight = 30
             };
             
-            if (GUILayout.Button("▶ 成功音テスト", testButtonStyle, GUILayout.Width(120)))
+            if (GUILayout.Button("> 成功音テスト", testButtonStyle, GUILayout.Width(120)))
             {
                 WorldUploadNotificationSound.TestSound();
             }
             GUILayout.Space(10);
-            if (GUILayout.Button("▶ 失敗音テスト", testButtonStyle, GUILayout.Width(120)))
+            if (GUILayout.Button("> 失敗音テスト", testButtonStyle, GUILayout.Width(120)))
             {
                 WorldUploadNotificationSound.TestErrorSound();
             }
@@ -1046,13 +1046,12 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
         private void DrawSdkStatusCompact(string name, bool available)
         {
             var color = available ? new Color(0.3f, 0.8f, 0.3f) : Color.gray;
-            var icon = available ? "✓" : "✗";
             var style = new GUIStyle(EditorStyles.miniLabel)
             {
                 normal = { textColor = color },
                 fontStyle = FontStyle.Bold
             };
-            GUILayout.Label($"{icon} {name} SDK", style);
+            GUILayout.Label($"[{(available ? "OK" : "--")}] {name} SDK", style);
         }
 
         private void DrawSoundSelector(string label, string[] soundLabels, ref SoundSelection selection, 
@@ -1062,7 +1061,7 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("▶", GUILayout.Width(25), GUILayout.Height(18)))
+            if (GUILayout.Button(">", GUILayout.Width(25), GUILayout.Height(18)))
             {
                 if (isSuccess)
                     WorldUploadNotificationSound.TestSound();
