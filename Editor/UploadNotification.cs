@@ -1026,12 +1026,12 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
                 fixedHeight = 30
             };
             
-            if (GUILayout.Button("> 成功音テスト", testButtonStyle, GUILayout.Width(120)))
+            if (GUILayout.Button("▶ 成功音テスト", testButtonStyle, GUILayout.Width(120)))
             {
                 WorldUploadNotificationSound.TestSound();
             }
             GUILayout.Space(10);
-            if (GUILayout.Button("> 失敗音テスト", testButtonStyle, GUILayout.Width(120)))
+            if (GUILayout.Button("▶ 失敗音テスト", testButtonStyle, GUILayout.Width(120)))
             {
                 WorldUploadNotificationSound.TestErrorSound();
             }
@@ -1061,7 +1061,7 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button(">", GUILayout.Width(25), GUILayout.Height(18)))
+            if (GUILayout.Button("▶", GUILayout.Width(25), GUILayout.Height(18)))
             {
                 if (isSuccess)
                     WorldUploadNotificationSound.TestSound();
