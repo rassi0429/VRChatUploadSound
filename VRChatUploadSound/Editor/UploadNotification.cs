@@ -474,6 +474,7 @@ Start-Sleep -Milliseconds 500
 $player.Play()
 while ($player.Position -lt $player.NaturalDuration.TimeSpan -and $player.NaturalDuration.HasTimeSpan) {{ Start-Sleep -Milliseconds 100 }}
 Start-Sleep -Milliseconds 500
+Remove-Item $MyInvocation.MyCommand.Path -Force
 ";
                     string tempScript = Path.Combine(Path.GetTempPath(), $"upload_notification_sound_{System.Threading.Thread.CurrentThread.ManagedThreadId}.ps1");
                     File.WriteAllText(tempScript, script, System.Text.Encoding.UTF8);
@@ -727,6 +728,7 @@ $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
 $xml.LoadXml($template)
 $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Unity Editor').Show($toast)
+Remove-Item $MyInvocation.MyCommand.Path -Force
 ";
 
                 File.WriteAllText(tempScript, script, System.Text.Encoding.UTF8);
@@ -784,6 +786,7 @@ $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
 $xml.LoadXml($template)
 $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Unity Editor').Show($toast)
+Remove-Item $MyInvocation.MyCommand.Path -Force
 ";
 
                 File.WriteAllText(tempScript, script, System.Text.Encoding.UTF8);
