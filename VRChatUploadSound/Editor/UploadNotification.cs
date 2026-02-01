@@ -420,30 +420,28 @@ namespace WorldUploadNotification
                 _lastBuildErrorTime = EditorApplication.timeSinceStartup;
                 _buildErrorNotified = true; // イベントハンドラでの重複通知を防止
 
-                // ダイアログ表示中でも音を鳴らすため、別スレッドで直接再生
                 #if UNITY_EDITOR_WIN
                 // パスを事前に取得（メインスレッドで）
                 var settings = UploadNotificationSettings.Instance;
                 string soundPath = settings.GetErrorSoundPath();
                 float volume = settings.errorVolume;
                 string dataPath = Application.dataPath;
+                bool toastEnabled = settings.toastEnabled;
 
+                // ダイアログ表示中でも即座に通知するため、別スレッドで実行
                 System.Threading.ThreadPool.QueueUserWorkItem(_ =>
                 {
                     try
                     {
                         PlaySoundDirect(soundPath, volume, dataPath);
+                        if (toastEnabled)
+                        {
+                            ShowWindowsToastDirect("VRChat SDK", "ビルド失敗...");
+                        }
                     }
                     catch (Exception) { /* バックグラウンドスレッドの例外は無視 */ }
                 });
                 #endif
-
-                // トースト通知は遅延実行（ダイアログ閉じた後）
-                EditorApplication.delayCall += () =>
-                {
-                    Debug.Log("[UploadNotification] ビルドエラーを検知（ログ監視）");
-                    ShowNotification("ビルド失敗...", false);
-                };
             }
         }
 
@@ -768,6 +766,49 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
                 .Replace(">", "&gt;")
                 .Replace("\"", "&quot;")
                 .Replace("'", "&apos;");
+        }
+
+        // 別スレッドから呼び出し可能なトースト通知（ログ出力なし）
+        private static void ShowWindowsToastDirect(string title, string message)
+        {
+            try
+            {
+                string tempScript = Path.Combine(Path.GetTempPath(), $"upload_notification_toast_{System.Threading.Thread.CurrentThread.ManagedThreadId}.ps1");
+
+                string script = $@"
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+
+$template = @'
+<toast>
+    <visual>
+        <binding template=""ToastText02"">
+            <text id=""1"">{EscapeXml(title)}</text>
+            <text id=""2"">{EscapeXml(message)}</text>
+        </binding>
+    </visual>
+</toast>
+'@
+
+$xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+$xml.LoadXml($template)
+$toast = New-Object Windows.UI.Notifications.ToastNotification $xml
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Unity Editor').Show($toast)
+";
+
+                File.WriteAllText(tempScript, script, System.Text.Encoding.UTF8);
+
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{tempScript}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                System.Diagnostics.Process.Start(startInfo);
+            }
+            catch (Exception) { /* 別スレッドなのでログ出力しない */ }
         }
         #endif
 
