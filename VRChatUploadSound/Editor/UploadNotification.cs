@@ -464,14 +464,16 @@ namespace WorldUploadNotification
 
                 if (File.Exists(fullPath))
                 {
-                    // PowerShellでWindows Media Playerを使って再生（ダイアログ表示中でも動作）
-                    int volumePercent = (int)(volume * 100);
+                    // PowerShellでMediaPlayerを使って再生（ダイアログ表示中でも動作）
                     string script = $@"
-$player = New-Object -ComObject WMPlayer.OCX
-$player.settings.volume = {volumePercent}
-$player.URL = '{fullPath.Replace("'", "''")}'
-Start-Sleep -Milliseconds 100
-while ($player.playState -eq 3) {{ Start-Sleep -Milliseconds 100 }}
+Add-Type -AssemblyName PresentationCore
+$player = New-Object System.Windows.Media.MediaPlayer
+$player.Volume = {volume.ToString(System.Globalization.CultureInfo.InvariantCulture)}
+$player.Open([Uri]'{fullPath.Replace("'", "''")}')
+Start-Sleep -Milliseconds 500
+$player.Play()
+while ($player.Position -lt $player.NaturalDuration.TimeSpan -and $player.NaturalDuration.HasTimeSpan) {{ Start-Sleep -Milliseconds 100 }}
+Start-Sleep -Milliseconds 500
 ";
                     string tempScript = Path.Combine(Path.GetTempPath(), $"upload_notification_sound_{System.Threading.Thread.CurrentThread.ManagedThreadId}.ps1");
                     File.WriteAllText(tempScript, script, System.Text.Encoding.UTF8);
