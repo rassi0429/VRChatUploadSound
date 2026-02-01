@@ -446,9 +446,6 @@ namespace WorldUploadNotification
         }
 
         #if UNITY_EDITOR_WIN
-        private static int _mciAliasCounter = 0;
-        private static string _lastMciAlias = null;
-
         private static void PlaySoundDirect(string soundPath, float volume, string dataPath)
         {
             if (!string.IsNullOrEmpty(soundPath))
@@ -467,41 +464,32 @@ namespace WorldUploadNotification
 
                 if (File.Exists(fullPath))
                 {
-                    // 前回のMCIリソースをクリーンアップ
-                    if (_lastMciAlias != null)
+                    // PowerShellでWindows Media Playerを使って再生（ダイアログ表示中でも動作）
+                    int volumePercent = (int)(volume * 100);
+                    string script = $@"
+$player = New-Object -ComObject WMPlayer.OCX
+$player.settings.volume = {volumePercent}
+$player.URL = '{fullPath.Replace("'", "''")}'
+Start-Sleep -Milliseconds 100
+while ($player.playState -eq 3) {{ Start-Sleep -Milliseconds 100 }}
+";
+                    string tempScript = Path.Combine(Path.GetTempPath(), $"upload_notification_sound_{System.Threading.Thread.CurrentThread.ManagedThreadId}.ps1");
+                    File.WriteAllText(tempScript, script, System.Text.Encoding.UTF8);
+
+                    var startInfo = new System.Diagnostics.ProcessStartInfo
                     {
-                        mciSendString($"close {_lastMciAlias}", null, 0, IntPtr.Zero);
-                    }
-
-                    // 一意のエイリアスを生成
-                    string alias = $"notifysound{_mciAliasCounter++}";
-                    _lastMciAlias = alias;
-
-                    string ext = Path.GetExtension(fullPath).ToLower();
-                    string openCmd = ext == ".mp3"
-                        ? $"open \"{fullPath}\" type mpegvideo alias {alias}"
-                        : $"open \"{fullPath}\" alias {alias}";
-
-                    int result = mciSendString(openCmd, null, 0, IntPtr.Zero);
-
-                    if (result == 0)
-                    {
-                        int mciVolume = (int)(volume * 1000);
-                        mciSendString($"setaudio {alias} volume to {mciVolume}", null, 0, IntPtr.Zero);
-                        mciSendString($"play {alias}", null, 0, IntPtr.Zero);
-                        return;
-                    }
+                        FileName = "powershell.exe",
+                        Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{tempScript}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+                    System.Diagnostics.Process.Start(startInfo);
+                    return;
                 }
             }
 
             System.Media.SystemSounds.Hand.Play();
         }
-        #endif
-
-        #if UNITY_EDITOR_WIN
-        [DllImport("winmm.dll")]
-        private static extern int mciSendString(string command, System.Text.StringBuilder buffer, int bufferSize, IntPtr hwndCallback);
-
         #endif
 
         private static void PlayNotificationSound(bool isSuccess = true)
@@ -730,8 +718,7 @@ $template = @'
             <text id=""2"">{EscapeXml(message)}</text>
         </binding>
     </visual>
-    <audio silent=""true""/>
-</toast>
+    </toast>
 '@
 
 $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
@@ -788,8 +775,7 @@ $template = @'
             <text id=""2"">{EscapeXml(message)}</text>
         </binding>
     </visual>
-    <audio silent=""true""/>
-</toast>
+    </toast>
 '@
 
 $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
