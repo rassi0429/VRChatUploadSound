@@ -29,7 +29,7 @@ namespace WorldUploadNotification
         public float successVolume = 1.0f;
         public float errorVolume = 1.0f;
 
-        private const string TemplateFolder = "Assets/kokoa/Asset";
+        private const string TemplateFolder = "Assets/kokoa/VRChatUploadSound/Asset";
 
         public string GetSuccessSoundPath()
         {
