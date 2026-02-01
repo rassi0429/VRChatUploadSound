@@ -908,9 +908,11 @@ Remove-Item $MyInvocation.MyCommand.Path -Force
             EditorGUILayout.Space(5);
             settings.enabled = EditorGUILayout.Toggle("通知を有効にする", settings.enabled);
             #if UNITY_EDITOR_WIN
-            settings.toastEnabled = EditorGUILayout.Toggle(
-                new GUIContent("Windowsトースト通知", "Windowsの通知センターにポップアップを表示します"),
-                settings.toastEnabled);
+            settings.toastEnabled = EditorGUILayout.Toggle("Windowsトースト通知", settings.toastEnabled);
+            if (settings.toastEnabled)
+            {
+                EditorGUILayout.HelpBox("Windowsの通知センターにポップアップを表示します", MessageType.Info);
+            }
             #endif
             EditorGUILayout.EndVertical();
 
