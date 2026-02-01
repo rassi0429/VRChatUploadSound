@@ -909,81 +909,172 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 
     public class UploadNotificationSettingsWindow : EditorWindow
     {
+        private const string VERSION = "1.0.0";
         private static readonly string[] SuccessSoundLabels = { "電子レンジのチン", "電子音１", "電子音２", "カスタム" };
         private static readonly string[] ErrorSoundLabels = { "電子音１", "ﾎﾟﾖﾖｰﾝ", "トランペット", "カスタム" };
+
+        private static GUIStyle _headerStyle;
+        private static GUIStyle _boxStyle;
+        private static GUIStyle _versionStyle;
+        private Vector2 _scrollPosition;
 
         public static void ShowWindow()
         {
             var window = GetWindow<UploadNotificationSettingsWindow>("Upload Notification");
-            window.minSize = new Vector2(400, 380);
+            window.minSize = new Vector2(350, 420);
             window.Show();
+        }
+
+        private void InitStyles()
+        {
+            if (_headerStyle == null)
+            {
+                _headerStyle = new GUIStyle(EditorStyles.boldLabel)
+                {
+                    fontSize = 16,
+                    alignment = TextAnchor.MiddleCenter,
+                    margin = new RectOffset(0, 0, 10, 5)
+                };
+            }
+
+            if (_versionStyle == null)
+            {
+                _versionStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    normal = { textColor = Color.gray }
+                };
+            }
+
+            if (_boxStyle == null)
+            {
+                _boxStyle = new GUIStyle("HelpBox")
+                {
+                    padding = new RectOffset(10, 10, 10, 10),
+                    margin = new RectOffset(5, 5, 5, 5)
+                };
+            }
         }
 
         private void OnGUI()
         {
+            InitStyles();
             var settings = UploadNotificationSettings.Instance;
 
-            GUILayout.Label("アップロード通知設定", EditorStyles.boldLabel);
+            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
+
+            // ヘッダー
+            EditorGUILayout.Space(5);
+            GUILayout.Label("🔔 Upload Notification", _headerStyle);
+            GUILayout.Label($"v{VERSION} by kokoa", _versionStyle);
+
+            // SDK状態（コンパクト表示）
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            DrawSdkStatusCompact("World", WorldUploadNotificationSound.IsWorldSdkAvailable());
+            GUILayout.Space(10);
+            DrawSdkStatusCompact("Avatar", WorldUploadNotificationSound.IsAvatarSdkAvailable());
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndHorizontal();
+
             EditorGUILayout.Space(10);
 
             EditorGUI.BeginChangeCheck();
 
+            // 基本設定セクション
+            EditorGUILayout.BeginVertical(_boxStyle);
+            EditorGUILayout.LabelField("基本設定", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
             settings.enabled = EditorGUILayout.Toggle("通知を有効にする", settings.enabled);
-
             #if UNITY_EDITOR_WIN
             settings.toastEnabled = EditorGUILayout.Toggle("Windowsトースト通知", settings.toastEnabled);
             #endif
+            EditorGUILayout.EndVertical();
 
-            EditorGUILayout.Space(10);
+            // 通知が無効の場合はグレーアウト
+            EditorGUI.BeginDisabledGroup(!settings.enabled);
 
-            // 成功音
-            DrawSoundSelector("成功音", SuccessSoundLabels, ref settings.successSelection, ref settings.customSuccessSoundPath, ref settings.successVolume);
+            // 成功音セクション
+            EditorGUILayout.BeginVertical(_boxStyle);
+            DrawSoundSelector("✅ 成功音", SuccessSoundLabels, ref settings.successSelection, 
+                ref settings.customSuccessSoundPath, ref settings.successVolume, true);
+            EditorGUILayout.EndVertical();
 
-            EditorGUILayout.Space(10);
+            // 失敗音セクション
+            EditorGUILayout.BeginVertical(_boxStyle);
+            DrawSoundSelector("❌ 失敗音", ErrorSoundLabels, ref settings.errorSelection, 
+                ref settings.customErrorSoundPath, ref settings.errorVolume, false);
+            EditorGUILayout.EndVertical();
 
-            // 失敗音
-            DrawSoundSelector("失敗音", ErrorSoundLabels, ref settings.errorSelection, ref settings.customErrorSoundPath, ref settings.errorVolume);
+            EditorGUI.EndDisabledGroup();
 
             if (EditorGUI.EndChangeCheck())
             {
                 UploadNotificationSettings.Save();
             }
 
-            EditorGUILayout.Space(15);
+            EditorGUILayout.Space(10);
 
+            // テストボタン
+            EditorGUI.BeginDisabledGroup(!settings.enabled);
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("成功音テスト", GUILayout.Width(100), GUILayout.Height(25)))
+            
+            var testButtonStyle = new GUIStyle(GUI.skin.button)
+            {
+                fontStyle = FontStyle.Bold,
+                fixedHeight = 30
+            };
+            
+            if (GUILayout.Button("▶ 成功音テスト", testButtonStyle, GUILayout.Width(120)))
             {
                 WorldUploadNotificationSound.TestSound();
             }
-            if (GUILayout.Button("失敗音テスト", GUILayout.Width(100), GUILayout.Height(25)))
+            GUILayout.Space(10);
+            if (GUILayout.Button("▶ 失敗音テスト", testButtonStyle, GUILayout.Width(120)))
             {
                 WorldUploadNotificationSound.TestErrorSound();
             }
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
+            EditorGUI.EndDisabledGroup();
 
             EditorGUILayout.Space(10);
-            EditorGUILayout.LabelField("検出しているSDK", EditorStyles.boldLabel);
-
-            EditorGUILayout.BeginHorizontal();
-            DrawStatusIcon(WorldUploadNotificationSound.IsWorldSdkAvailable());
-            EditorGUILayout.LabelField("World SDK");
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.BeginHorizontal();
-            DrawStatusIcon(WorldUploadNotificationSound.IsAvatarSdkAvailable());
-            EditorGUILayout.LabelField("Avatar SDK");
-            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.EndScrollView();
         }
 
-        private void DrawSoundSelector(string label, string[] soundLabels, ref SoundSelection selection, ref string customPath, ref float volume)
+        private void DrawSdkStatusCompact(string name, bool available)
         {
+            var color = available ? new Color(0.3f, 0.8f, 0.3f) : Color.gray;
+            var icon = available ? "✓" : "✗";
+            var style = new GUIStyle(EditorStyles.miniLabel)
+            {
+                normal = { textColor = color },
+                fontStyle = FontStyle.Bold
+            };
+            GUILayout.Label($"{icon} {name} SDK", style);
+        }
+
+        private void DrawSoundSelector(string label, string[] soundLabels, ref SoundSelection selection, 
+            ref string customPath, ref float volume, bool isSuccess)
+        {
+            // ヘッダーと試聴ボタン
+            EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(label, EditorStyles.boldLabel);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("▶", GUILayout.Width(25), GUILayout.Height(18)))
+            {
+                if (isSuccess)
+                    WorldUploadNotificationSound.TestSound();
+                else
+                    WorldUploadNotificationSound.TestErrorSound();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.Space(3);
 
             // ドロップダウンで選択
-            selection = (SoundSelection)EditorGUILayout.Popup((int)selection, soundLabels);
+            selection = (SoundSelection)EditorGUILayout.Popup("サウンド", (int)selection, soundLabels);
 
             // カスタム選択時のみファイル選択UI表示
             if (selection == SoundSelection.Custom)
@@ -1025,8 +1116,8 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
 
             // 音量スライダー
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField("音量", GUILayout.Width(35));
-            volume = EditorGUILayout.Slider(volume, 0f, 1f);
+            volume = EditorGUILayout.Slider("音量", volume, 0f, 1f);
+            EditorGUILayout.LabelField($"{Mathf.RoundToInt(volume * 100)}%", GUILayout.Width(40));
             EditorGUILayout.EndHorizontal();
         }
 
@@ -1061,15 +1152,6 @@ $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
                 return "Assets" + path.Substring(projectPath.Length).Replace("\\", "/");
             }
             return path.Replace("\\", "/");
-        }
-
-        private void DrawStatusIcon(bool available)
-        {
-            var style = new GUIStyle(EditorStyles.label)
-            {
-                normal = { textColor = available ? Color.green : Color.gray }
-            };
-            GUILayout.Label(available ? "✓" : "✗", style, GUILayout.Width(20));
         }
     }
 }
