@@ -540,6 +540,7 @@ namespace WorldUploadNotification
             #endif
         }
 
+        #if UNITY_EDITOR_WIN
         private static void PlayDefaultNotificationSound(float volume, bool isSuccess)
         {
             try
