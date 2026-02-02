@@ -1,0 +1,14 @@
+{
+    "name": "dev.kokoa.upload-notification",
+    "version": "1.1.0",
+    "displayName": "kokoa's Upload Notification",
+    "description": "Sends a notification when an upload completes.",
+    "unity": "2022.3",
+    "author": {
+        "name": "kokoa",
+        "url": "https://github.com/rassi0429"
+    },
+    "license": "MIT",
+    "licenseUrl": "",
+    "vpmDependencies": {}
+}
