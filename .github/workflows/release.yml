@@ -1,7 +1,9 @@
 name: "Build unitypackage"
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - '*.*.*'      # 1.0.0 など 3つの数字がドットで繋がっているsemverのタグに反応
 
 permissions:
   contents: write
