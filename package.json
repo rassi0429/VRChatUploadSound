@@ -1,6 +1,6 @@
 {
     "name": "dev.kokoa.upload-notification",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "displayName": "kokoa's Upload Notification",
     "description": "Sends a notification when an upload completes.",
     "unity": "2022.3",
