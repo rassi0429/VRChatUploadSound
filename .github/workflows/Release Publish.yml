@@ -1,0 +1,26 @@
+name: "Release Publish"
+
+on:
+  release:
+    types: published
+    tags: "*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout"
+        uses: "actions/checkout@v4"
+
+      - name: Update Website
+        run: |
+          TOKEN=${{ secrets.TOKEN }}
+          curl \
+            -X POST \
+            -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/rassi0429/KokoaVPMRepository/dispatches \
+            -d '{"event_type":"automatic-web-update","client_payload":{"env": "dev"}}'
